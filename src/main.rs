@@ -1,7 +1,5 @@
 use std::env;
-use std::ffi::OsStr;
 use std::fs;
-use std::io::{self, Write};
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -21,25 +19,23 @@ fn main() {
     //automatically reads in current dir
     let args: Vec<String> = env::args().collect();
     let test_dir: &Path;
-    let mut program_name: &Path = Path::new(".");
-    let mut program_name_string = PathBuf::from(".");
+    let mut program_name = PathBuf::new();
     match args.len() {
         1 => {
             test_dir = Path::new(".");
-            program_name_string = find_main_java(test_dir);
+            program_name = find_main_java(test_dir);
         }
         2 => {
             if args[1].ends_with(".java") {
                 test_dir = Path::new(".");
-                program_name = Path::new(&args[1]);
             } else {
                 test_dir = Path::new(&args[1]);
-                program_name_string = find_main_java(test_dir);
+                program_name = find_main_java(test_dir);
             }
         }
         _ => {
             test_dir = Path::new("a");
-            program_name_string = find_main_java(test_dir);
+            program_name = find_main_java(test_dir);
             println!("Error");
         }
     }
@@ -47,7 +43,7 @@ fn main() {
     println!(
         "{}, {}",
         String::from(test_dir.display().to_string()),
-        String::from(program_name_string.display().to_string()),
+        String::from(program_name.display().to_string()),
     );
     if args.len() != 3 {
         println!("wrong input");
@@ -64,18 +60,18 @@ fn main() {
     );
     return;
 
-    let paths = fs::read_dir(test_dir).unwrap();
-
-    for path in paths {
-        let file = path.unwrap().path().display().to_string();
-        let file_name = String::from(file);
-        println!("{}", file_name);
-
-        if file_name.ends_with(".in") {
-            let output = Command::new("java").arg("Test.java").output().expect("run");
-            println!("status: {}", output.status);
-            io::stdout().write_all(&output.stdout).unwrap();
-            io::stderr().write_all(&output.stderr).unwrap();
-        }
-    }
+    //    let paths = fs::read_dir(test_dir).unwrap();
+    //
+    //    for path in paths {
+    //        let file = path.unwrap().path().display().to_string();
+    //        let file_name = String::from(file);
+    //        println!("{}", file_name);
+    //
+    //        if file_name.ends_with(".in") {
+    //            let output = Command::new("java").arg("Test.java").output().expect("run");
+    //            println!("status: {}", output.status);
+    //            io::stdout().write_all(&output.stdout).unwrap();
+    //            io::stderr().write_all(&output.stderr).unwrap();
+    //        }
+    //    }
 }
