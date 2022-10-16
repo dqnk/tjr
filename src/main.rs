@@ -1,4 +1,5 @@
 use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
 use std::path::PathBuf;
@@ -6,10 +7,16 @@ use std::process::Command;
 
 fn find_main_java(path: &Path) -> PathBuf {
     let paths = fs::read_dir(path).unwrap();
-    for pat2 in paths {
-        let patcopy = String::from(pat2.unwrap().path().display().to_string());
-        if patcopy.ends_with(".java") {
-            return PathBuf::from(patcopy);
+    for p in paths {
+        if p.as_ref()
+            .unwrap()
+            .path()
+            .as_path()
+            .extension()
+            .and_then(OsStr::to_str)
+            == Some("java")
+        {
+            return PathBuf::from(p.unwrap().path().as_path());
         }
     }
     panic!("error finding main.java file");
@@ -19,7 +26,7 @@ fn main() {
     //automatically reads in current dir
     let args: Vec<String> = env::args().collect();
     let test_dir: &Path;
-    let mut program_name = PathBuf::new();
+    let program_name: PathBuf;
     match args.len() {
         1 => {
             test_dir = Path::new(".");
@@ -28,6 +35,7 @@ fn main() {
         2 => {
             if args[1].ends_with(".java") {
                 test_dir = Path::new(".");
+                program_name = PathBuf::from(&args[1]);
             } else {
                 test_dir = Path::new(&args[1]);
                 program_name = find_main_java(test_dir);
