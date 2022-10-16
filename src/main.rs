@@ -42,9 +42,7 @@ fn main() {
             }
         }
         _ => {
-            test_dir = Path::new("a");
-            program_name = find_main_java(test_dir);
-            println!("Error");
+            panic!("error")
         }
     }
 
@@ -53,19 +51,7 @@ fn main() {
         String::from(test_dir.display().to_string()),
         String::from(program_name.display().to_string()),
     );
-    if args.len() != 3 {
-        println!("wrong input");
-        return;
-    }
 
-    let program_name = &args[1];
-    let test_dir = Path::new(&args[2]);
-
-    println!(
-        "test dir: {}, program name: {}",
-        test_dir.display().to_string(),
-        program_name
-    );
     return;
 
     //    let paths = fs::read_dir(test_dir).unwrap();
