@@ -16,7 +16,7 @@ fn find_main_java(path: &Path) -> PathBuf {
             .and_then(OsStr::to_str)
             == Some("java")
         {
-            return PathBuf::from(p.unwrap().path().as_path());
+            return p.unwrap().path();
         }
     }
     panic!("error finding main.java file");
