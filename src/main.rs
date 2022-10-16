@@ -6,12 +6,13 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
 
-fn find_main_java(path: &Path, mut java_path: PathBuf) {
+fn find_main_java(path: &Path, mut java_path: PathBuf) -> PathBuf {
     let paths = fs::read_dir(path).unwrap();
-    for path in paths {
-        if path.unwrap().path().extension() == Some("java") {
-            java_path.push(path.unwrap().path().as_path());
-            return;
+    for pat2 in paths {
+        let patcopy = String::from(pat2.unwrap().path().display().to_string());
+        if patcopy.ends_with(".java") {
+            java_path.push(patcopy);
+            return java_path;
         }
     }
     panic!("error finding main.java file");
@@ -22,11 +23,11 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let test_dir: &Path;
     let mut program_name: &Path = Path::new(".");
-    let program_name_string: PathBuf = PathBuf::new();
+    let mut program_name_string: PathBuf = PathBuf::new();
     match args.len() {
         1 => {
             test_dir = Path::new(".");
-            find_main_java(test_dir, program_name_string);
+            program_name_string = find_main_java(test_dir, program_name_string);
         }
         2 => {
             if args[1].ends_with(".java") {
@@ -34,12 +35,12 @@ fn main() {
                 program_name = Path::new(&args[1]);
             } else {
                 test_dir = Path::new(&args[1]);
-                find_main_java(test_dir, program_name_string);
+                program_name_string = find_main_java(test_dir, program_name_string);
             }
         }
         _ => {
             test_dir = Path::new("a");
-            find_main_java(test_dir, program_name_string);
+            program_name_string = find_main_java(test_dir, program_name_string);
             println!("Error");
         }
     }
@@ -47,7 +48,7 @@ fn main() {
     println!(
         "{}, {}",
         String::from(test_dir.display().to_string()),
-        String::from(program_name.display().to_string()),
+        String::from(program_name_string.display().to_string()),
     );
     if args.len() != 3 {
         println!("wrong input");
