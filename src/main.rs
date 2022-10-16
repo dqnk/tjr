@@ -79,6 +79,7 @@ fn main() {
 
         if file_name.ends_with(".in") {
             let output = Command::new("java").arg("Test.java").output().expect("run");
+            // TODO: write output to .res file/check if file even compiled
             println!("status: {}", output.status);
             io::stdout().write_all(&output.stdout).unwrap();
             io::stderr().write_all(&output.stderr).unwrap();
