@@ -79,10 +79,19 @@ fn main() {
 
         if file_name.ends_with(".in") {
             let output = Command::new("java").arg("Test.java").output().expect("run");
-            // TODO: write output to .res file/check if file even compiled
-            println!("status: {}", output.status);
-            io::stdout().write_all(&output.stdout).unwrap();
-            io::stderr().write_all(&output.stderr).unwrap();
+            // TODO: write output to .res file
+
+            // panics should probably just be a println
+            if output.status.code().unwrap() < 0 {
+                io::stderr().write_all(&output.stderr).unwrap();
+                panic!("Something is wrong with your OS: error {}", output.status);
+            } else if output.status.code().unwrap() > 0 {
+                io::stderr().write_all(&output.stderr).unwrap();
+                panic!("Error compiling/running: {}", output.status);
+            } else {
+                println!("status: {}", output.status);
+                io::stdout().write_all(&output.stdout).unwrap();
+            }
         }
     }
 }
