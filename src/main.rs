@@ -6,6 +6,7 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use std::thread;
 
 fn find_main_java(path: &Path) -> PathBuf {
     let paths = fs::read_dir(path).unwrap();
@@ -29,6 +30,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let test_dir: &Path;
     let program_name: PathBuf;
+    let mut children = vec![];
 
     // obtain test_dir and program_name depending on the args provided
     // args.len() returns number of args including the executable name stored in &args[0]
@@ -69,48 +71,55 @@ fn main() {
 
     for test in tests {
         let file = test.unwrap().path();
+        let program_name = program_name.clone();
         if file.extension() == None {
             continue;
             //TODO need serious cleanup here
         } else {
             // TODO pipe the input file
             if file.extension().unwrap() == "in" {
-                let file_stem = file.file_stem().unwrap().to_str().unwrap();
-                let output = Command::new(format!("java"))
-                    .arg(&program_name)
-                    .stdin(File::open(format!("{}.in", file_stem)).unwrap())
-                    .output()
-                    .expect("run");
-                // TODO: write output to .res file
-
-                // panics should probably just be a println
-                if output.status.code().unwrap() < 0 {
-                    io::stderr().write_all(&output.stderr).unwrap();
-                    panic!("Something is wrong with your OS: error {}", output.status);
-                } else if output.status.code().unwrap() > 0 {
-                    io::stderr().write_all(&output.stderr).unwrap();
-                    panic!("Error compiling/running: {}", output.status);
-                } else {
-                    fs::write(format!("{}.res", file_stem), &output.stdout)
-                        .expect("Unable to write output file");
-                    //diff should return nothing
-                    //println!("{}", file_stem);
-                    let out_file = PathBuf::from("a0.out");
-                    let res_file = PathBuf::from("a0.res");
-                    let output_diff = Command::new(format!("diff"))
-                        .arg(&out_file)
-                        .arg(&res_file)
+                children.push(thread::spawn(move || {
+                    println!("thread created");
+                    let file_stem = file.file_stem().unwrap().to_str().unwrap();
+                    let output = Command::new(format!("java"))
+                        .arg(&program_name)
+                        .stdin(File::open(format!("{}.in", file_stem)).unwrap())
                         .output()
                         .expect("run");
-                    let out = String::from_utf8(output_diff.stdout).unwrap();
-                    println!("{}", &output_diff.status);
-                    if out == "" {
-                        println!("fine");
+                    // TODO: write output to .res file
+
+                    // panics should probably just be a println
+                    if output.status.code().unwrap() < 0 {
+                        io::stderr().write_all(&output.stderr).unwrap();
+                        panic!("Something is wrong with your OS: error {}", output.status);
+                    } else if output.status.code().unwrap() > 0 {
+                        io::stderr().write_all(&output.stderr).unwrap();
+                        panic!("Error compiling/running: {}", output.status);
                     } else {
-                        println!("not fine {}", out);
+                        fs::write(format!("{}.res", file_stem), &output.stdout)
+                            .expect("Unable to write output file");
+                        //diff should return nothing
+                        //println!("{}", file_stem);
+                        let out_file = PathBuf::from("a0.out");
+                        let res_file = PathBuf::from("a0.res");
+                        let output_diff = Command::new(format!("diff"))
+                            .arg(&out_file)
+                            .arg(&res_file)
+                            .output()
+                            .expect("run");
+                        let out = String::from_utf8(output_diff.stdout).unwrap();
+                        println!("{}", &output_diff.status);
+                        if out == "" {
+                            println!("fine");
+                        } else {
+                            println!("not fine {}", out);
+                        }
                     }
-                }
+                }));
             }
         }
+    }
+    for child in children {
+        let _ = child.join();
     }
 }
