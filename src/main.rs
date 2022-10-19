@@ -102,8 +102,8 @@ async fn main() {
                         fs::write(format!("{}.res", file_stem), &output.stdout)
                             .expect("Unable to write output file");
                         //diff should return nothing
-                        let out_file = PathBuf::from("a0.out");
-                        let res_file = PathBuf::from("a0.res");
+                        let out_file = PathBuf::from(format!("{}.out", file_stem));
+                        let res_file = PathBuf::from(format!("{}.res", file_stem));
                         let output_diff = Command::new(format!("diff"))
                             .arg(&out_file)
                             .arg(&res_file)
