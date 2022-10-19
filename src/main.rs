@@ -1,4 +1,3 @@
-#![feature(let_else)]
 use std::env;
 use std::ffi::OsStr;
 use std::fs;
@@ -64,7 +63,6 @@ fn main() {
             panic!("too many/too few arguments")
         }
     }
-    let mut i = 0;
     //contains all files, not just tests, but will be filtered later in for loop
     let tests = fs::read_dir(test_dir).unwrap().into_iter();
 
@@ -89,16 +87,27 @@ fn main() {
                     io::stderr().write_all(&output.stderr).unwrap();
                     panic!("Error compiling/running: {}", output.status);
                 } else {
-                    fs::write(
-                        format!("{}.res", file.file_stem().unwrap().to_str().unwrap()),
-                        &output.stdout,
-                    )
-                    .expect("Unable to write output file");
+                    let file_stem = file.file_stem().unwrap().to_str().unwrap();
+                    fs::write(format!("{}.res", file_stem), &output.stdout)
+                        .expect("Unable to write output file");
+                    //diff should return nothing
+                    //println!("{}", file_stem);
+                    let out_file = PathBuf::from("a0.out");
+                    let res_file = PathBuf::from("a0.res");
+                    let output_diff = Command::new(format!("diff"))
+                        .arg(&out_file)
+                        .arg(&res_file)
+                        .output()
+                        .expect("run");
+                    let out = String::from_utf8(output_diff.stdout).unwrap();
+                    println!("{}", &output_diff.status);
+                    if out == "" {
+                        println!("fine");
+                    } else {
+                        println!("not fine {}", out);
+                    }
                 }
             }
         }
-        println!("{}", i);
-        i += 1;
     }
-    println!("here");
 }
