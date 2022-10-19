@@ -83,9 +83,8 @@ async fn main() {
                     let program_name = program_name.clone();
                     let file = file.clone();
                     async move {
-                    println!("thread created");
                     let file_stem = file.file_stem().unwrap().to_str().unwrap();
-                    let output = Command::new(format!("java"))
+                    let output = Command::new("java")
                         .arg(&program_name)
                         .stdin(File::open(format!("{}.in", file_stem)).unwrap())
                         .output()
@@ -103,7 +102,6 @@ async fn main() {
                         fs::write(format!("{}.res", file_stem), &output.stdout)
                             .expect("Unable to write output file");
                         //diff should return nothing
-                        //println!("{}", file_stem);
                         let out_file = PathBuf::from("a0.out");
                         let res_file = PathBuf::from("a0.res");
                         let output_diff = Command::new(format!("diff"))
@@ -112,7 +110,6 @@ async fn main() {
                             .output()
                             .expect("run");
                         let out = String::from_utf8(output_diff.stdout).unwrap();
-                        println!("{}", &output_diff.status);
                         if out == "" {
                             println!("fine");
                         } else {
@@ -124,6 +121,6 @@ async fn main() {
         }
     }
     for child in children {
-    let _ = child.await;
+        let _ = child.await;
     }
 }
