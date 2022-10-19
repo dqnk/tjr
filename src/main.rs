@@ -1,6 +1,7 @@
 use std::env;
 use std::ffi::OsStr;
 use std::fs;
+use std::fs::File;
 use std::io::{self, Write};
 use std::path::Path;
 use std::path::PathBuf;
@@ -72,9 +73,12 @@ fn main() {
             continue;
             //TODO need serious cleanup here
         } else {
+            // TODO pipe the input file
             if file.extension().unwrap() == "in" {
-                let output = Command::new("java")
+                let file_stem = file.file_stem().unwrap().to_str().unwrap();
+                let output = Command::new(format!("java"))
                     .arg(&program_name)
+                    .stdin(File::open(format!("{}.in", file_stem)).unwrap())
                     .output()
                     .expect("run");
                 // TODO: write output to .res file
@@ -87,7 +91,6 @@ fn main() {
                     io::stderr().write_all(&output.stderr).unwrap();
                     panic!("Error compiling/running: {}", output.status);
                 } else {
-                    let file_stem = file.file_stem().unwrap().to_str().unwrap();
                     fs::write(format!("{}.res", file_stem), &output.stdout)
                         .expect("Unable to write output file");
                     //diff should return nothing
