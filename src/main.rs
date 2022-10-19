@@ -90,7 +90,7 @@ fn main() {
                     panic!("Error compiling/running: {}", output.status);
                 } else {
                     fs::write(
-                        format!("{}.out", file.file_stem().unwrap().to_str().unwrap()),
+                        format!("{}.res", file.file_stem().unwrap().to_str().unwrap()),
                         &output.stdout,
                     )
                     .expect("Unable to write output file");
