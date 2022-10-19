@@ -20,14 +20,10 @@ fn find_main_java(path: &Path) {
 fn main() {
     //automatically reads in current dir
     let args: Vec<String> = env::args().collect();
-    let test_dir: &Path;
+    let mut test_dir: &Path;
     let program_name: String;
     match args.len() {
-        1 => {
-            test_dir = Path::new(".");
-            //fix
-            program_name = find_main_java();
-        }
+        1 => test_dir = Path::new("."),
         2 => test_dir = Path::new("."),
         _ => println!("Error"),
     }
