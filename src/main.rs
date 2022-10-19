@@ -1,4 +1,5 @@
 use std::env;
+use async_std;
 use std::ffi::OsStr;
 use std::fs;
 use std::fs::File;
@@ -6,18 +7,17 @@ use std::io::{self, Write};
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
-use std::thread;
 
 fn find_main_java(path: &Path) -> PathBuf {
     let paths = fs::read_dir(path).unwrap();
     for p in paths {
         if p.as_ref()
             .unwrap()
-            .path()
-            .as_path()
-            .extension()
-            .and_then(OsStr::to_str)
-            == Some("java")
+                .path()
+                .as_path()
+                .extension()
+                .and_then(OsStr::to_str)
+                == Some("java")
         {
             return p.unwrap().path();
         }
@@ -25,7 +25,8 @@ fn find_main_java(path: &Path) -> PathBuf {
     panic!("error finding main.java file");
 }
 
-fn main() {
+#[async_std::main]
+async fn main() {
     // read args provided to command from CLI
     let args: Vec<String> = env::args().collect();
     let test_dir: &Path;
@@ -70,15 +71,18 @@ fn main() {
     let tests = fs::read_dir(test_dir).unwrap().into_iter();
 
     for test in tests {
-        let file = test.unwrap().path();
         let program_name = program_name.clone();
+        let file = PathBuf::from(test.unwrap().path());
         if file.extension() == None {
             continue;
             //TODO need serious cleanup here
         } else {
             // TODO pipe the input file
             if file.extension().unwrap() == "in" {
-                children.push(thread::spawn(move || {
+                children.push(async_std::task::spawn({
+                    let program_name = program_name.clone();
+                    let file = file.clone();
+                    async move {
                     println!("thread created");
                     let file_stem = file.file_stem().unwrap().to_str().unwrap();
                     let output = Command::new(format!("java"))
@@ -115,11 +119,11 @@ fn main() {
                             println!("not fine {}", out);
                         }
                     }
-                }));
+                }}));
             }
         }
     }
     for child in children {
-        let _ = child.join();
+    let _ = child.await;
     }
 }
