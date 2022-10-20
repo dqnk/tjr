@@ -1,8 +1,9 @@
 use std::env;
+use file_diff::{diff_files};
 use async_std;
 use std::fs;
 use std::fs::File;
-use std::io::{self, Write};
+use std::io::{self, Write, Error, ErrorKind};
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
@@ -26,43 +27,43 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
     panic!("error finding main.java file");
 }
 
-async fn thread(program_name: PathBuf, file: &Path) {
+async fn thread(program_name: PathBuf, file: &Path) -> Result<(), io::Error> {
     // how?
-    let file_stem = file.file_stem().unwrap().to_str().unwrap();
     let output = Command::new("java")
         .arg(&program_name)
         //how
-        .stdin(File::open(format!("{}.in", file_stem)).unwrap())
+        .stdin(File::open(file.with_extension("in"))?)
         .output()
         .expect("run");
     // panics should probably just be a println
     // how? separate var?
-    if output.status.code().unwrap() < 0 {
+    if output.status.code().unwrap_or(-1) < 0 {
         //how
-        io::stderr().write_all(&output.stderr).unwrap();
-        panic!("Something is wrong with your OS: error {}", output.status);
-    } else if output.status.code().unwrap() > 0 {
+        io::stderr().write_all(&output.stderr)?;
+        return Err(Error::new(ErrorKind::Other, "Negative status code from java"));
+    } else if output.status.code().unwrap_or(1) > 0 {
         //how
-        io::stderr().write_all(&output.stderr).unwrap();
-        panic!("Error compiling/running: {}", output.status);
+        io::stderr().write_all(&output.stderr)?;
+        return Err(Error::new(ErrorKind::Other, "Positive error code from java"));
     } else {
-        fs::write(format!("{}.res", file_stem), &output.stdout)
+        fs::write(file.with_extension("res"), &output.stdout)
             .expect("Unable to write output file");
-        let out_file = PathBuf::from(format!("{}.out", file_stem));
-        let res_file = PathBuf::from(format!("{}.res", file_stem));
-        let output_diff = Command::new(format!("diff"))
-            .arg(&out_file)
-            .arg(&res_file)
-            .output()
-            .expect("run");
-        let out = String::from_utf8(output_diff.stdout).unwrap();
-        if out == "" {
+        let mut out_file = File::open(file.with_extension("out")).unwrap();
+
+        let mut res_file = File::open(file.with_extension("res")).unwrap();
+//        let output_diff = Command::new(format!("diff"))
+//            .arg(&out_file)
+//            .arg(&res_file)
+//            .output()
+//            .expect("run");
+        let out = diff_files(&mut out_file, &mut res_file);
+        if !out {
             println!("fine");
         } else {
             println!("not fine {}", out);
         }
     }
-
+    Ok(())
 }
 
 #[async_std::main]
@@ -134,8 +135,5 @@ async fn main() -> Result<(), io::Error>{
     for child in children {
         let _ = child.await;
     }
-    return Ok(());
+    Ok(())
 }
-//for child in children {
-//    let _ = child.await;
-//}
