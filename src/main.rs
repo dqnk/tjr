@@ -27,17 +27,22 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
 }
 
 async fn thread(program_name: PathBuf, file: &Path) {
+    // how?
     let file_stem = file.file_stem().unwrap().to_str().unwrap();
     let output = Command::new("java")
         .arg(&program_name)
+        //how
         .stdin(File::open(format!("{}.in", file_stem)).unwrap())
         .output()
         .expect("run");
     // panics should probably just be a println
+    // how? separate var?
     if output.status.code().unwrap() < 0 {
+        //how
         io::stderr().write_all(&output.stderr).unwrap();
         panic!("Something is wrong with your OS: error {}", output.status);
     } else if output.status.code().unwrap() > 0 {
+        //how
         io::stderr().write_all(&output.stderr).unwrap();
         panic!("Error compiling/running: {}", output.status);
     } else {
@@ -70,6 +75,7 @@ async fn main() -> Result<(), io::Error>{
 
     // obtain test_dir and program_name depending on the args provided
     // args.len() returns number of args including the executable name stored in &args[0]
+    // move this match to a separate function?
     match args.len() {
         1 => {
             //assume everything is happening in current dir
@@ -102,6 +108,7 @@ async fn main() -> Result<(), io::Error>{
             panic!("too many arguments")
         }
     }
+
     let folder = fs::read_dir(test_dir).expect("error").into_iter();
     //contains all files, not just tests, but will be filtered later in for loop
     for file in folder {
