@@ -26,7 +26,7 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
     panic!("error finding main.java file");
 }
 
-async fn thread(program_name: PathBuf, file: &Path) -> Result<(), io::Error> {
+async fn thread(thread_number: u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
     // how?
     let output = Command::new("java")
         .arg(&program_name)
@@ -50,19 +50,22 @@ async fn thread(program_name: PathBuf, file: &Path) -> Result<(), io::Error> {
 
         let out_file = file.with_extension("out");
         let res_file = file.with_extension("res");
-        let output_diff = Command::new(format!("diff"))
+        let output_diff = Command::new("diff")
+            .arg("--context")
             .arg(&out_file)
             .arg(&res_file)
             .output()
             .expect("run").stdout;
         if output_diff.is_empty() {
-            println!("fine");
+            println!("Test {} fine", thread_number);
+        return Ok(String::from(format!("e{}",thread_number)));
         } else {
             //what does :? do?
-            println!("not fine {}", String::from_utf8(output_diff).unwrap_or(String::from("Files differ")));
+            println!("Test {} not fine:\n {}", thread_number, String::from_utf8(output_diff).unwrap_or(String::from("Output and result files differ")));
+            return Ok(String::from(format!("{}", thread_number)));
         }
     }
-    Ok(())
+//    Ok(String::from("fine"))
 }
 
 #[async_std::main]
@@ -111,6 +114,7 @@ async fn main() -> Result<(), io::Error>{
 
     let folder = fs::read_dir(test_dir).expect("error").into_iter();
     //contains all files, not just tests, but will be filtered later in for loop
+    let mut thread_number = 1;
     for file in folder {
 
         let file = match file {
@@ -123,16 +127,20 @@ async fn main() -> Result<(), io::Error>{
                 children.push(async_std::task::spawn({
                     let program_name = program_name.clone();
                     let file = file.clone();
+                    let thread_number = thread_number.clone();
                     //TODO which asyncs are necessary here?
                     async move {
-                        let _ = thread(program_name, &file).await;
+                        let a = thread(thread_number, program_name, &file).await;
+                        return a;
                     }}));
+                thread_number += 1;
             }},
             None => {},
         }
     }
     for child in children {
-        let _ = child.await;
+        let a = child.await;
+        println!("thread {}", a.unwrap());
     }
     Ok(())
 }
