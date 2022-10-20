@@ -55,13 +55,13 @@ async fn thread(program_name: PathBuf, file: &Path) -> Result<(), io::Error> {
             .arg(&res_file)
             .output()
             .expect("run");
-        let out = String::from_utf8(output_diff.stdout).unwrap();
+        let out = &output_diff.stdout;
         println!("{}", &output_diff.status);
-
-        if out == "" {
+        if out.is_empty() {
             println!("fine");
         } else {
-            println!("not fine {}", out);
+            //what does :? do?
+            println!("not fine {:?}", &output_diff.stdout);
         }
     }
     Ok(())
