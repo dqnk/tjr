@@ -1,5 +1,4 @@
 use std::env;
-use file_diff::{diff_files};
 use async_std;
 use std::fs;
 use std::fs::File;
@@ -48,16 +47,18 @@ async fn thread(program_name: PathBuf, file: &Path) -> Result<(), io::Error> {
     } else {
         fs::write(file.with_extension("res"), &output.stdout)
             .expect("Unable to write output file");
-        let mut out_file = File::open(file.with_extension("out")).unwrap();
 
-        let mut res_file = File::open(file.with_extension("res")).unwrap();
-//        let output_diff = Command::new(format!("diff"))
-//            .arg(&out_file)
-//            .arg(&res_file)
-//            .output()
-//            .expect("run");
-        let out = diff_files(&mut out_file, &mut res_file);
-        if !out {
+        let out_file = file.with_extension("out");
+        let res_file = file.with_extension("res");
+        let output_diff = Command::new(format!("diff"))
+            .arg(&out_file)
+            .arg(&res_file)
+            .output()
+            .expect("run");
+        let out = String::from_utf8(output_diff.stdout).unwrap();
+        println!("{}", &output_diff.status);
+
+        if out == "" {
             println!("fine");
         } else {
             println!("not fine {}", out);
