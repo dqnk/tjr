@@ -138,9 +138,12 @@ async fn main() -> Result<(), io::Error>{
             None => {},
         }
     }
+    let mut outs = vec![];
     for child in children {
         let a = child.await;
-        println!("thread {}", a.unwrap());
+        outs.push(a.unwrap());
     }
+    for a in outs {
+        println!("{}", a);}
     Ok(())
 }
