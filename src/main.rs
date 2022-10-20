@@ -54,14 +54,12 @@ async fn thread(program_name: PathBuf, file: &Path) -> Result<(), io::Error> {
             .arg(&out_file)
             .arg(&res_file)
             .output()
-            .expect("run");
-        let out = &output_diff.stdout;
-        println!("{}", &output_diff.status);
-        if out.is_empty() {
+            .expect("run").stdout;
+        if output_diff.is_empty() {
             println!("fine");
         } else {
             //what does :? do?
-            println!("not fine {:?}", &output_diff.stdout);
+            println!("not fine {}", String::from_utf8(output_diff).unwrap_or(String::from("Files differ")));
         }
     }
     Ok(())
