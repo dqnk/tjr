@@ -27,21 +27,15 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
 }
 
 async fn thread(thread_number: u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
-    // how?
     let output = Command::new("java")
         .arg(&program_name)
-        //how
         .stdin(File::open(file.with_extension("in"))?)
         .output()
         .expect("run");
-    // panics should probably just be a println
-    // how? separate var?
     if output.status.code().unwrap_or(-1) < 0 {
-        //how
         io::stderr().write_all(&output.stderr)?;
         return Err(Error::new(ErrorKind::Other, "Negative status code from java"));
     } else if output.status.code().unwrap_or(1) > 0 {
-        //how
         io::stderr().write_all(&output.stderr)?;
         return Err(Error::new(ErrorKind::Other, "Positive error code from java"));
     } else {
@@ -58,14 +52,12 @@ async fn thread(thread_number: u8, program_name: PathBuf, file: &Path) -> Result
             .expect("run").stdout;
         if output_diff.is_empty() {
             println!("Test {} fine", thread_number);
-        return Ok(String::from(format!("e{}",thread_number)));
+        return Ok(String::from(format!("{} done, fine",thread_number)));
         } else {
-            //what does :? do?
-            println!("Test {} not fine:\n {}", thread_number, String::from_utf8(output_diff).unwrap_or(String::from("Output and result files differ")));
-            return Ok(String::from(format!("{}", thread_number)));
+            println!("Test {} NOT fine:\n {}", thread_number, String::from_utf8(output_diff).unwrap_or(String::from("Output and result files differ")));
+            return Ok(String::from(format!("{} done, NOT fine", thread_number)));
         }
     }
-//    Ok(String::from("fine"))
 }
 
 #[async_std::main]
@@ -139,11 +131,14 @@ async fn main() -> Result<(), io::Error>{
         }
     }
     let mut outs = vec![];
+    let mut idx = 0;
     for child in children {
         let a = child.await;
-        outs.push(a.unwrap());
+        idx += 1;
+        outs.push(a.unwrap_or(format!("{} likely did not finish", idx)));
     }
     for a in outs {
-        println!("{}", a);}
+        println!("Thread {}", a);
+    }
     Ok(())
 }
