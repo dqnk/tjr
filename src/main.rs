@@ -130,15 +130,11 @@ async fn main() -> Result<(), io::Error>{
             None => {},
         }
     }
-    let mut outs = vec![];
     let mut idx = 0;
     for child in children {
         let a = child.await;
         idx += 1;
-        outs.push(a.unwrap_or(format!("{} likely did not finish", idx)));
-    }
-    for a in outs {
-        println!("Thread {}", a);
+        println!("Thread {}", a.unwrap_or(format!("{} likely did not finish", idx)));
     }
     Ok(())
 }
