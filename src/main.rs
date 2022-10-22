@@ -43,13 +43,13 @@ async fn thread(thread_number: u8, program_name: PathBuf, file: &Path) -> Result
             .output()
             ?.stdout;
         if output_diff.is_empty() {
-            println!("Test {} fine", thread_number);
-        return Ok(String::from(format!("{} done, fine",thread_number)));
+            println!("Thread {} fine", thread_number);
+            return Ok(String::from(format!("{} done, fine",thread_number)));
         } else {
-            println!("Test {} NOT fine:\n {}", thread_number, 
+            println!("Thread {} NOT fine:\n {}", thread_number, 
                 String::from_utf8(output_diff)
                 .unwrap_or(String::from("Output and result files differ")));
-            return Ok(String::from(format!("{} done, NOT fine", thread_number)));
+                return Ok(String::from(format!("{} done, NOT fine", thread_number)));
         }
     }
 }
@@ -118,13 +118,16 @@ async fn main() -> Result<(), io::Error>{
             thread_number += 1;
         }
     }
-let mut idx = 0;
-let mut children_outputs = vec![];
-for child in children {
-    children_outputs.push(child.await.unwrap_or(format!("{} likely did not finish", idx)));
-    idx += 1;
+
+    let mut idx = 0;
+    let mut children_outputs = vec![];
+
+    for child in children {
+        children_outputs.push(child.await.unwrap_or(format!("{} likely did not finish", idx)));
+        idx += 1;
     }
+
     for child in children_outputs{
-        println!("{}", child);}
+        println!("Test {}", child);}
     Ok(())
 }
