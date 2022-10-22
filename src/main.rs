@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::process::Command;
 
 fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
-    let paths = fs::read_dir(path).expect("Could not find target test dir").into_iter();
+    let paths = fs::read_dir(path)?.into_iter();
     for p in paths {
         let file = match p {
             Ok(file) => file.path(),
@@ -30,17 +30,16 @@ async fn thread(thread_number: u8, program_name: PathBuf, file: &Path) -> Result
     let output = Command::new("java")
         .arg(&program_name)
         .stdin(File::open(file.with_extension("in"))?)
-        .output()
-        .expect("run");
-    if output.status.code().unwrap_or(-1) < 0 {
+        .output()?;
+    let output_status = output.status.code().unwrap_or(-1);
+    if output_status < 0 {
         io::stderr().write_all(&output.stderr)?;
-        return Err(Error::new(ErrorKind::Other, "Negative status code from java"));
-    } else if output.status.code().unwrap_or(1) > 0 {
+        return Err(Error::new(ErrorKind::Other, format!("Error {} from java - program could not run", output_status)));
+    } else if output_status > 0 {
         io::stderr().write_all(&output.stderr)?;
-        return Err(Error::new(ErrorKind::Other, "Positive error code from java"));
+        return Err(Error::new(ErrorKind::Other, format!("Error {} from java - error compiling probably", output_status)));
     } else {
-        fs::write(file.with_extension("res"), &output.stdout)
-            .expect("Unable to write output file");
+        fs::write(file.with_extension("res"), &output.stdout)?;
 
         let out_file = file.with_extension("out");
         let res_file = file.with_extension("res");
@@ -49,7 +48,7 @@ async fn thread(thread_number: u8, program_name: PathBuf, file: &Path) -> Result
             .arg(&out_file)
             .arg(&res_file)
             .output()
-            .expect("run").stdout;
+            ?.stdout;
         if output_diff.is_empty() {
             println!("Test {} fine", thread_number);
         return Ok(String::from(format!("{} done, fine",thread_number)));
@@ -104,7 +103,7 @@ async fn main() -> Result<(), io::Error>{
         }
     }
 
-    let folder = fs::read_dir(test_dir).expect("error").into_iter();
+    let folder = fs::read_dir(test_dir)?.into_iter();
     //contains all files, not just tests, but will be filtered later in for loop
     let mut thread_number = 1;
     for file in folder {
@@ -131,10 +130,12 @@ async fn main() -> Result<(), io::Error>{
         }
     }
     let mut idx = 0;
+    let mut children_outputs = vec![];
     for child in children {
-        let a = child.await;
+        children_outputs.push(child.await.unwrap_or(format!("{} likely did not finish", idx)));
         idx += 1;
-        println!("Thread {}", a.unwrap_or(format!("{} likely did not finish", idx)));
     }
+    for child in children_outputs{
+        println!("{}", child);}
     Ok(())
 }
