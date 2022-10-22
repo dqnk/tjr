@@ -16,7 +16,7 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
             return Ok(file);
         }
     }
-    panic!("Main java file not found.");
+    return Err(Error::new(ErrorKind::Other, "Main java file not found."));
 }
 
 async fn thread(thread_number: u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
