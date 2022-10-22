@@ -1,4 +1,5 @@
 use std::env;
+use std::ffi::OsStr;
 use async_std;
 use std::fs;
 use std::fs::File;
@@ -10,20 +11,12 @@ use std::process::Command;
 fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
     let paths = fs::read_dir(path)?.into_iter();
     for p in paths {
-        let file = match p {
-            Ok(file) => file.path(),
-            Err(error) => return Err(error),
-        };
-        match file.extension(){
-            Some(extension) => {
-                if extension == "java" {
-                    return Ok(file);
-                }
-            },
-            None => {},
+        let file = p?.path();
+        if file.extension().unwrap_or(OsStr::new("")) == "java" {
+            return Ok(file);
         }
     }
-    panic!("error finding main.java file");
+    panic!("Main java file not found.");
 }
 
 async fn thread(thread_number: u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
@@ -53,7 +46,9 @@ async fn thread(thread_number: u8, program_name: PathBuf, file: &Path) -> Result
             println!("Test {} fine", thread_number);
         return Ok(String::from(format!("{} done, fine",thread_number)));
         } else {
-            println!("Test {} NOT fine:\n {}", thread_number, String::from_utf8(output_diff).unwrap_or(String::from("Output and result files differ")));
+            println!("Test {} NOT fine:\n {}", thread_number, 
+                String::from_utf8(output_diff)
+                .unwrap_or(String::from("Output and result files differ")));
             return Ok(String::from(format!("{} done, NOT fine", thread_number)));
         }
     }
@@ -103,37 +98,31 @@ async fn main() -> Result<(), io::Error>{
         }
     }
 
-    let folder = fs::read_dir(test_dir)?.into_iter();
     //contains all files, not just tests, but will be filtered later in for loop
+    let folder = fs::read_dir(test_dir)?.into_iter();
+
     let mut thread_number = 1;
+
     for file in folder {
-
-        let file = match file {
-            Ok(file) => file.path(),
-            Err(error) => return Err(error),
-        };
-
-        match file.extension(){
-            Some(extension) => {if extension == "in" {
-                children.push(async_std::task::spawn({
-                    let program_name = program_name.clone();
-                    let file = file.clone();
-                    let thread_number = thread_number.clone();
-                    //TODO which asyncs are necessary here?
-                    async move {
-                        let a = thread(thread_number, program_name, &file).await;
-                        return a;
-                    }}));
-                thread_number += 1;
-            }},
-            None => {},
+        let file = file?.path();
+        if file.extension().unwrap_or(OsStr::new("")) == "in" {
+            children.push(async_std::task::spawn({
+                let program_name = program_name.clone();
+                let file = file.clone();
+                let thread_number = thread_number.clone();
+                //TODO which asyncs are necessary here?
+                async move {
+                    let a = thread(thread_number, program_name, &file).await;
+                    return a;
+                }}));
+            thread_number += 1;
         }
     }
-    let mut idx = 0;
-    let mut children_outputs = vec![];
-    for child in children {
-        children_outputs.push(child.await.unwrap_or(format!("{} likely did not finish", idx)));
-        idx += 1;
+let mut idx = 0;
+let mut children_outputs = vec![];
+for child in children {
+    children_outputs.push(child.await.unwrap_or(format!("{} likely did not finish", idx)));
+    idx += 1;
     }
     for child in children_outputs{
         println!("{}", child);}
