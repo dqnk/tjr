@@ -19,7 +19,7 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
     return Err(Error::new(ErrorKind::Other, "Main java file not found."));
 }
 
-async fn thread(thread_number: u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
+async fn thread(t_idx: u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
     let output = Command::new("java")
         .arg(&program_name)
         .stdin(File::open(file.with_extension("in"))?)
@@ -27,10 +27,12 @@ async fn thread(thread_number: u8, program_name: PathBuf, file: &Path) -> Result
     let output_status = output.status.code().unwrap_or(-1);
     if output_status < 0 {
         io::stderr().write_all(&output.stderr)?;
-        return Err(Error::new(ErrorKind::Other, format!("Error {} from java - program could not run", output_status)));
+        return Err(Error::new(ErrorKind::Other,
+                format!("Error {} from java - program could not run", output_status)));
     } else if output_status > 0 {
         io::stderr().write_all(&output.stderr)?;
-        return Err(Error::new(ErrorKind::Other, format!("Error {} from java - error compiling probably", output_status)));
+        return Err(Error::new(ErrorKind::Other,
+                format!("Error {} from java - error compiling probably", output_status)));
     } else {
         fs::write(file.with_extension("res"), &output.stdout)?;
 
@@ -43,13 +45,14 @@ async fn thread(thread_number: u8, program_name: PathBuf, file: &Path) -> Result
             .output()
             ?.stdout;
         if output_diff.is_empty() {
-            println!("Thread {} fine", thread_number);
-            return Ok(String::from(format!("{} done, fine",thread_number)));
+            println!("Thread {} fine", t_idx);
+            return Ok(String::from(format!("{} done, fine",t_idx)));
         } else {
-            println!("Thread {} NOT fine:\n {}", thread_number, 
+            println!("Thread {} NOT fine:\n {}", t_idx,
                 String::from_utf8(output_diff)
                 .unwrap_or(String::from("Output and result files differ")));
-                return Ok(String::from(format!("{} done, NOT fine", thread_number)));
+
+                return Ok(String::from(format!("{} done, NOT fine", t_idx)));
         }
     }
 }
@@ -101,7 +104,7 @@ async fn main() -> Result<(), io::Error>{
     //contains all files, not just tests, but will be filtered later in for loop
     let folder = fs::read_dir(test_dir)?.into_iter();
 
-    let mut thread_number = 1;
+    let mut t_idx = 1;
 
     for file in folder {
         let file = file?.path();
@@ -109,13 +112,13 @@ async fn main() -> Result<(), io::Error>{
             children.push(async_std::task::spawn({
                 let program_name = program_name.clone();
                 let file = file.clone();
-                let thread_number = thread_number.clone();
+                let t_idx = t_idx.clone();
                 //TODO which asyncs are necessary here?
                 async move {
-                    let a = thread(thread_number, program_name, &file).await;
+                    let a = thread(t_idx, program_name, &file).await;
                     return a;
                 }}));
-            thread_number += 1;
+            t_idx += 1;
         }
     }
 
