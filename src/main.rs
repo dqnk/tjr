@@ -21,7 +21,7 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
 
 async fn thread(t_idx: u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
     let output = Command::new("java")
-        .arg(&program_name)
+        .arg(&program_name.with_extension(""))
         .stdin(File::open(file.with_extension("in"))?)
         .output()?;
     let output_status = output.status.code().unwrap_or(-1);
@@ -52,7 +52,7 @@ async fn thread(t_idx: u8, program_name: PathBuf, file: &Path) -> Result<String,
                 String::from_utf8(output_diff)
                 .unwrap_or(String::from("Output and result files differ")));
 
-                return Ok(String::from(format!("{} done, NOT fine", t_idx)));
+            return Ok(String::from(format!("{} done, NOT fine", t_idx)));
         }
     }
 }
@@ -103,6 +103,9 @@ async fn main() -> Result<(), io::Error>{
 
     //contains all files, not just tests, but will be filtered later in for loop
     let folder = fs::read_dir(test_dir)?.into_iter();
+    let _output = Command::new("javac")
+        .arg(&program_name.with_extension("java"))
+        .output()?;
 
     let mut t_idx = 1;
 
