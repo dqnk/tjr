@@ -19,7 +19,7 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
     return Err(Error::new(ErrorKind::Other, "Main java file not found."));
 }
 
-async fn thread(t_idx: u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
+fn thread(t_idx: u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
     //this should be simpler
     let output = Command::new("java")
         .arg("-cp")
@@ -49,7 +49,6 @@ async fn thread(t_idx: u8, program_name: PathBuf, file: &Path) -> Result<String,
             .output()
             ?.stdout;
         if output_diff.is_empty() {
-            println!("Thread {} fine", t_idx);
             return Ok(String::from(format!("{} done, fine",t_idx)));
         } else {
             println!("Thread {} NOT fine:\n {}", t_idx,
@@ -118,7 +117,7 @@ async fn main() -> Result<(), io::Error>{
                 let t_idx = t_idx.clone();
                 //TODO which asyncs are necessary here?
                 async move {
-                    let a = thread(t_idx, program_name, &file).await;
+                    let a = thread(t_idx, program_name, &file);
                     return a;
                 }}));
             t_idx += 1;
