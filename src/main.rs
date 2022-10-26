@@ -12,7 +12,7 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
     let paths = fs::read_dir(path)?.into_iter();
     for p in paths {
         let file = p?.path();
-        if file.extension().unwrap_or(None) == "java" {
+        if file.extension().unwrap_or(OsStr::new(".")) == "java" {
             return Ok(file);
         }
     }
