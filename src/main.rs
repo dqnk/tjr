@@ -13,7 +13,7 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
     for p in paths {
         let file = p?.path();
         if file.extension().unwrap_or(OsStr::new("")) == "java" {
-            println!("{}", file.display().to_string());
+            println!("{}", file.file_stem().unwrap().to_str().unwrap());
             return Ok(file);
         }
     }
@@ -21,8 +21,11 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
 }
 
 async fn thread(t_idx: u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
+    //this should be simpler
     let output = Command::new("java")
-        .arg(&program_name.with_extension(""))
+        .arg("-cp")
+        .arg(&program_name.parent().unwrap().to_str().unwrap())
+        .arg(&program_name.strip_prefix(program_name.parent().unwrap().to_str().unwrap()).unwrap().file_stem().unwrap().to_str().unwrap())
         .stdin(File::open(file.with_extension("in"))?)
         .output()?;
     let output_status = output.status.code().unwrap_or(-1);
@@ -107,7 +110,6 @@ async fn main() -> Result<(), io::Error>{
     let _output = Command::new("javac")
         .arg(&program_name.with_extension("java"))
         .output()?;
-    println!("tt");
 
     let mut t_idx = 1;
 
