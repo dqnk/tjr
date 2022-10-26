@@ -13,6 +13,7 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
     for p in paths {
         let file = p?.path();
         if file.extension().unwrap_or(OsStr::new("")) == "java" {
+            println!("{}", file.display().to_string());
             return Ok(file);
         }
     }
@@ -106,6 +107,7 @@ async fn main() -> Result<(), io::Error>{
     let _output = Command::new("javac")
         .arg(&program_name.with_extension("java"))
         .output()?;
+    println!("tt");
 
     let mut t_idx = 1;
 
