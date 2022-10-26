@@ -21,11 +21,13 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
 }
 
 async fn thread(t_idx: u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
+    println!("{}", program_name.with_extension("").file_name().unwrap_or(OsStr::new("")).to_str().unwrap_or("not found"));
     //this should be simpler
+    //TODO remove unwraps
     let output = Command::new("java")
         .arg("-cp")
         .arg(&program_name.parent().unwrap().to_str().unwrap())
-        .arg(&program_name.strip_prefix(program_name.parent().unwrap().to_str().unwrap()).unwrap().file_stem().unwrap().to_str().unwrap())
+        .arg(program_name.with_extension("").file_name().unwrap_or(OsStr::new("")).to_str().unwrap_or("not found"))
         .stdin(File::open(file.with_extension("in"))?)
         .output()?;
     let output_status = output.status.code().unwrap_or(-1);
