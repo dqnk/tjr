@@ -13,21 +13,19 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
     for p in paths {
         let file = p?.path();
         if file.extension().unwrap_or(OsStr::new("")) == "java" {
-            println!("{}", file.file_stem().unwrap().to_str().unwrap());
-            return Ok(file);
+            return Ok(file.with_extension(""));
         }
     }
     return Err(Error::new(ErrorKind::Other, "Main java file not found."));
 }
 
 async fn thread(t_idx: u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
-    println!("{}", program_name.with_extension("").file_name().unwrap_or(OsStr::new("")).to_str().unwrap_or("not found"));
     //this should be simpler
-    //TODO remove unwraps
     let output = Command::new("java")
         .arg("-cp")
-        .arg(&program_name.parent().unwrap().to_str().unwrap())
-        .arg(program_name.with_extension("").file_name().unwrap_or(OsStr::new("")).to_str().unwrap_or("not found"))
+        .arg(&program_name.parent().unwrap_or(Path::new(".")))
+        //this probably needs a better solution than OsStr::new
+        .arg(&program_name.file_name().unwrap_or(OsStr::new(&program_name)))
         .stdin(File::open(file.with_extension("in"))?)
         .output()?;
     let output_status = output.status.code().unwrap_or(-1);
@@ -84,7 +82,7 @@ async fn main() -> Result<(), io::Error>{
             // java program is provided, tests are in current dir
             if args[1].ends_with(".java") {
                 test_dir = Path::new(".");
-                program_name = PathBuf::from(&args[1]);
+                program_name = PathBuf::from(&args[1]).with_extension("");
             } else {
                 // test dir is provided, java program is in current dir
                 test_dir = Path::new(&args[1]);
@@ -94,13 +92,8 @@ async fn main() -> Result<(), io::Error>{
         3 => {
             // java program and test dir are provided, order does not matter
             // should program name be exected without ".java" filetype
-            if args[1].ends_with(".java") {
-                program_name = PathBuf::from(&args[1]);
+                program_name = PathBuf::from(&args[1]).with_extension("");
                 test_dir = Path::new(&args[2]);
-            } else {
-                program_name = PathBuf::from(format!("{}.java", &args[1]));
-                test_dir = Path::new(&args[2]);
-            }
         }
         _ => {
             panic!("too many arguments")
@@ -112,6 +105,7 @@ async fn main() -> Result<(), io::Error>{
     let _output = Command::new("javac")
         .arg(&program_name.with_extension("java"))
         .output()?;
+    
 
     let mut t_idx = 1;
 
@@ -119,7 +113,7 @@ async fn main() -> Result<(), io::Error>{
         let file = file?.path();
         if file.extension().unwrap_or(OsStr::new("")) == "in" {
             children.push(async_std::task::spawn({
-                let program_name = program_name.clone();
+                let program_name = program_name.clone().with_extension("");
                 let file = file.clone();
                 let t_idx = t_idx.clone();
                 //TODO which asyncs are necessary here?
@@ -143,3 +137,4 @@ async fn main() -> Result<(), io::Error>{
         println!("Test {}", child);}
     Ok(())
 }
+
