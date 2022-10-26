@@ -49,6 +49,7 @@ fn thread(t_idx: u8, program_name: PathBuf, file: &Path) -> Result<String, io::E
             .output()
             ?.stdout;
         if output_diff.is_empty() {
+            println!("Thread {} fine", t_idx);
             return Ok(String::from(format!("{} done, fine",t_idx)));
         } else {
             println!("Thread {} NOT fine:\n {}", t_idx,
