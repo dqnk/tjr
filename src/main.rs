@@ -12,8 +12,8 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
     let paths = fs::read_dir(path)?.into_iter();
     for p in paths {
         let file = p?.path();
-        if file.extension().unwrap_or(OsStr::new("")) == "java" {
-            return Ok(file.with_extension(""));
+        if file.extension().unwrap_or(None) == "java" {
+            return Ok(file);
         }
     }
     return Err(Error::new(ErrorKind::Other, "Main java file not found."));
@@ -26,7 +26,7 @@ fn thread(t_idx: u8, program_name: PathBuf, file: &Path) -> Result<String, io::E
         .arg(&program_name.parent().unwrap_or(Path::new(".")))
         //this probably needs a better solution than OsStr::new
         .arg(&program_name.file_name().unwrap_or(OsStr::new(&program_name)))
-        .stdin(File::open(file.with_extension("in"))?)
+        .stdin(File::open(file)?)
         .output()?;
     let output_status = output.status.code().unwrap_or(-1);
     if output_status < 0 {
@@ -40,12 +40,10 @@ fn thread(t_idx: u8, program_name: PathBuf, file: &Path) -> Result<String, io::E
     } else {
         fs::write(file.with_extension("res"), &output.stdout)?;
 
-        let out_file = file.with_extension("out");
-        let res_file = file.with_extension("res");
         let output_diff = Command::new("diff")
             .arg("--context")
-            .arg(&out_file)
-            .arg(&res_file)
+            .arg(file.with_extension("out"))
+            .arg(file.with_extension("res"))
             .output()
             ?.stdout;
         if output_diff.is_empty() {
@@ -82,7 +80,7 @@ async fn main() -> Result<(), io::Error>{
             // java program is provided, tests are in current dir
             if args[1].ends_with(".java") {
                 test_dir = Path::new(".");
-                program_name = PathBuf::from(&args[1]).with_extension("");
+                program_name = PathBuf::from(&args[1]);
             } else {
                 // test dir is provided, java program is in current dir
                 test_dir = Path::new(&args[1]);
@@ -92,7 +90,7 @@ async fn main() -> Result<(), io::Error>{
         3 => {
             // java program and test dir are provided, order does not matter
             // should program name be exected without ".java" filetype
-                program_name = PathBuf::from(&args[1]).with_extension("");
+                program_name = PathBuf::from(&args[1]);
                 test_dir = Path::new(&args[2]);
         }
         _ => {
