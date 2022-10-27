@@ -19,7 +19,7 @@ fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
     return Err(Error::new(ErrorKind::Other, "Main java file not found."));
 }
 
-fn thread(t_idx: u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
+fn thread(t_idx: &u8, program_name: PathBuf, file: &Path) -> Result<String, io::Error> {
     //this should be simpler
     let output = Command::new("java")
         .arg("-cp")
@@ -113,10 +113,9 @@ async fn main() -> Result<(), io::Error>{
             children.push(async_std::task::spawn({
                 let program_name = program_name.clone().with_extension("");
                 let file = file.clone();
-                let t_idx = t_idx.clone();
                 //TODO which asyncs are necessary here?
                 async move {
-                    let a = thread(t_idx, program_name, &file);
+                    let a = thread(&t_idx, program_name, &file);
                     return a;
                 }}));
             t_idx += 1;
