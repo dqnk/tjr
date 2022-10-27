@@ -48,12 +48,12 @@ fn thread(t_idx: &u8, program_name: PathBuf, file: &Path) -> Result<String, io::
             ?.stdout;
         if output_diff.is_empty() {
 //            println!("Thread {} fine", t_idx);
-            return Ok(String::from(format!("{} \u{2705}",t_idx)));
+            return Ok(String::from(format!("\u{2705} Test {}",t_idx)));
         } else {
             fs::write(file.with_extension("diff"), String::from_utf8(output_diff)
                 .unwrap_or(String::from("Output and result files differ")))?;
  //           println!("Thread {} \u{274C}", t_idx);
-            return Ok(String::from(format!("{} \u{274C}", t_idx)));
+            return Ok(String::from(format!("\u{274C} Test {}", t_idx)));
         }
     }
 }
@@ -130,7 +130,7 @@ async fn main() -> Result<(), io::Error>{
     }
 
     for child in children_outputs{
-        println!("Test {}", child);}
+        println!("{}", child);}
     Ok(())
 }
 
