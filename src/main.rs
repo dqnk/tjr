@@ -47,14 +47,13 @@ fn thread(t_idx: &u8, program_name: PathBuf, file: &Path) -> Result<String, io::
             .output()
             ?.stdout;
         if output_diff.is_empty() {
-            println!("Thread {} fine", t_idx);
-            return Ok(String::from(format!("{} done, fine",t_idx)));
+//            println!("Thread {} fine", t_idx);
+            return Ok(String::from(format!("{} \u{2705}",t_idx)));
         } else {
-            println!("Thread {} NOT fine:\n {}", t_idx,
-                String::from_utf8(output_diff)
-                .unwrap_or(String::from("Output and result files differ")));
-
-            return Ok(String::from(format!("{} done, NOT fine", t_idx)));
+            fs::write(file.with_extension("diff"), String::from_utf8(output_diff)
+                .unwrap_or(String::from("Output and result files differ")))?;
+ //           println!("Thread {} \u{274C}", t_idx);
+            return Ok(String::from(format!("{} \u{274C}", t_idx)));
         }
     }
 }
@@ -126,7 +125,7 @@ async fn main() -> Result<(), io::Error>{
     let mut children_outputs = vec![];
 
     for child in children {
-        children_outputs.push(child.await.unwrap_or(format!("{} likely did not finish", idx)));
+        children_outputs.push(child.await.unwrap_or(format!("{} \u{2753} - likely did not finish", idx)));
         idx += 1;
     }
 
