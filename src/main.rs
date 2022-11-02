@@ -136,19 +136,14 @@ async fn main() -> Result<(), io::Error> {
     }
 
     let mut idx = 0;
-    let mut children_outputs = vec![];
 
     for child in children {
-        children_outputs.push(
-            child
-                .await
-                .unwrap_or(format!("{} \u{2753} - likely did not finish", idx)),
-        );
+        let out = child
+            .await
+            .unwrap_or(format!("{} \u{2753} - likely did not finish", idx));
+        println!("{}", out);
         idx += 1;
     }
 
-    for child in children_outputs {
-        println!("{}", child);
-    }
     Ok(())
 }
