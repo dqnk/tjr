@@ -53,8 +53,8 @@ fn thread(t_idx: &u8, program_name: PathBuf, file: &Path) -> Result<String, io::
 
         let output_diff = Command::new("diff")
             .arg("--context")
-            .arg(file.with_extension("out"))
             .arg(file.with_extension("res"))
+            .arg(file.with_extension("out"))
             .output()?
             .stdout;
         if output_diff.is_empty() {
