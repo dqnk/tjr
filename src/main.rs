@@ -1,4 +1,3 @@
-use async_std;
 use std::env;
 use std::ffi::OsStr;
 use std::fs;
@@ -7,6 +6,7 @@ use std::io::{self, Error, ErrorKind, Write};
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
+use tokio;
 
 fn find_main_java(path: &Path) -> Result<PathBuf, io::Error> {
     let paths = fs::read_dir(path)?.into_iter();
@@ -72,7 +72,7 @@ fn thread(t_idx: &u8, program_name: PathBuf, file: &Path) -> Result<String, io::
     }
 }
 
-#[async_std::main]
+#[tokio::main]
 async fn main() -> Result<(), io::Error> {
     // read args provided to command from CLI
     let args: Vec<String> = env::args().collect();
@@ -122,7 +122,7 @@ async fn main() -> Result<(), io::Error> {
     for file in folder {
         let file = file?.path();
         if file.extension().unwrap_or(OsStr::new("")) == "in" {
-            children.push(async_std::task::spawn({
+            children.push(tokio::spawn({
                 let program_name = program_name.clone().with_extension("");
                 let file = file.clone();
                 //TODO which asyncs are necessary here?
@@ -140,8 +140,8 @@ async fn main() -> Result<(), io::Error> {
     for child in children {
         let out = child
             .await
-            .unwrap_or(format!("{} \u{2753} - likely did not finish", idx));
-        println!("{}", out);
+            .unwrap_or(Ok(format!("{} \u{2753} - likely did not finish", idx)));
+        println!("{}", out.unwrap_or(String::from(" did not finish")));
         idx += 1;
     }
 
