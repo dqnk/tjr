@@ -118,8 +118,7 @@ async fn test_class(
                 program_name.push(file);
                 let mut file_name = std::env::current_dir()?;
                 file_name.push(
-                    &file
-                        .file_name()
+                    file.file_name()
                         .expect("No test file")
                         .to_str()
                         .expect("Test program name broken/too short")
