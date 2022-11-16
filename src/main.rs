@@ -110,20 +110,19 @@ async fn test_class(
 
     //test dir elements can be run with java without prior compilation, since they are only run once
     for file in folder {
-        let file = file?.path();
+        let file = &file?.path();
         if file.extension().unwrap_or(OsStr::new("")) == "java" {
             children.push(async_std::task::spawn({
                 let program_dir = program_dir.clone();
                 let mut program_name = std::env::current_dir()?;
                 program_name.push(file);
                 let mut file_name = std::env::current_dir()?;
-                file_name.push(test_dir);
                 file_name.push(
-                    program_name
+                    &file
                         .file_name()
-                        .expect("No program found")
+                        .expect("No test file")
                         .to_str()
-                        .expect("Test program name broken /too short")
+                        .expect("Test program name broken/too short")
                         .to_lowercase(),
                 );
 
