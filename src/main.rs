@@ -72,12 +72,9 @@ fn thread(t_idx: &u8, program_name: PathBuf, file: &Path) -> Result<String, io::
     }
 }
 
-async fn test_io(
-    program_name: PathBuf,
-    test_dir: &Path,
-    children: &mut Vec<async_std::task::JoinHandle<Result<String, std::io::Error>>>,
-) -> Result<(), std::io::Error> {
-    let mut t_idx = 1;
+async fn test_io(program_name: PathBuf, test_dir: &Path) -> Result<(), std::io::Error> {
+    let mut t_idx = 0;
+    let mut children = vec![];
     let folder = fs::read_dir(test_dir)?.into_iter();
     for file in folder {
         let file = file?.path();
@@ -85,14 +82,19 @@ async fn test_io(
             children.push(async_std::task::spawn({
                 let program_name = program_name.clone().with_extension("");
                 let file = file.clone();
-                //TODO which asyncs are necessary here?
                 async move {
                     let a = thread(&t_idx, program_name, &file);
                     return a;
                 }
             }));
-            t_idx += 1;
         }
+    }
+    let mut idx = 0;
+    for child in children {
+        child.await;
+        let out = child.unwrap_or("Something went wrong");
+        println!("{}", out);
+        idx += 1;
     }
     return Err(Error::new(ErrorKind::Other, "test file not found."));
 }
@@ -103,7 +105,6 @@ async fn main() -> Result<(), io::Error> {
     let args: Vec<String> = env::args().collect();
     let test_dir: &Path;
     let program_name: PathBuf;
-    let mut children = vec![];
 
     // obtain test_dir and program_name depending on the args provided
     // args.len() returns number of args including the executable name stored in &args[0]
@@ -146,17 +147,7 @@ async fn main() -> Result<(), io::Error> {
         .arg(&program_name.with_extension("java"))
         .output()?;
 
-    test_io(program_name, test_dir, &mut children);
-    let mut idx = 0;
-
-    for child in children {
-        child.await;
-        let out = child
-            .task()
-            .unwrap_or(format!("{} \u{2753} - likely did not finish", idx));
-        println!("{}", out);
-        idx += 1;
-    }
+    test_io(program_name, test_dir);
 
     Ok(())
 }
