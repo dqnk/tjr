@@ -76,15 +76,21 @@ async fn test_class(
     program_dir: &PathBuf,
     test_dir: &PathBuf,
 ) -> Result<Vec<String>, std::io::Error> {
-    //compile all programs
-    //test dir elements can be run with java without prior compilation, since they are only run once
     let program_name = PathBuf::from(".");
     let mut t_idx = 0;
     let mut children = vec![];
     let folder = fs::read_dir(test_dir)?.into_iter();
+
+    //compile all programs
+    let _output = Command::new("javac")
+        .current_dir(program_dir)
+        .arg("*.java")
+        .output()?;
+
+    //test dir elements can be run with java without prior compilation, since they are only run once
     for file in folder {
         let file = file?.path();
-        if file.extension().unwrap_or(OsStr::new("")) == "in" {
+        if file.extension().unwrap_or(OsStr::new("")) == "java" {
             children.push(async_std::task::spawn({
                 let program_name = program_name.clone().with_extension("");
                 let file = file.clone();
@@ -139,7 +145,7 @@ async fn main() -> Result<(), io::Error> {
     let args: Vec<String> = env::args().collect();
     let test_dir: PathBuf;
     let program_name: PathBuf;
-    let mut children = vec![];
+    let children: Vec<String>;
 
     // obtain test_dir and program_name depending on the args provided
     // args.len() returns number of args including the executable name stored in &args[0]
@@ -163,7 +169,6 @@ async fn main() -> Result<(), io::Error> {
             }
         }
         3 => {
-            // java program and test dir are provided, order does not matter
             // should program name be exected without ".java" filetype
             program_name = PathBuf::from(&args[1]);
             test_dir = PathBuf::from(&args[2]);
