@@ -72,6 +72,31 @@ fn thread(t_idx: &u8, program_name: PathBuf, file: &Path) -> Result<String, io::
     }
 }
 
+async fn test_io(
+    program_name: PathBuf,
+    test_dir: &Path,
+    children: &mut Vec<async_std::task::JoinHandle<Result<String, std::io::Error>>>,
+) -> Result<(), std::io::Error> {
+    let mut t_idx = 1;
+    let folder = fs::read_dir(test_dir)?.into_iter();
+    for file in folder {
+        let file = file?.path();
+        if file.extension().unwrap_or(OsStr::new("")) == "in" {
+            children.push(async_std::task::spawn({
+                let program_name = program_name.clone().with_extension("");
+                let file = file.clone();
+                //TODO which asyncs are necessary here?
+                async move {
+                    let a = thread(&t_idx, program_name, &file);
+                    return a;
+                }
+            }));
+            t_idx += 1;
+        }
+    }
+    return Err(Error::new(ErrorKind::Other, "test file not found."));
+}
+
 #[async_std::main]
 async fn main() -> Result<(), io::Error> {
     // read args provided to command from CLI
@@ -89,6 +114,7 @@ async fn main() -> Result<(), io::Error> {
             test_dir = Path::new(".");
             program_name = find_main_java(test_dir)?;
         }
+        //This is a special case, because it is a simple use-case and we might have multiple .java files
         2 => {
             // java program is provided, tests are in current dir
             if args[1].ends_with(".java") {
@@ -106,40 +132,27 @@ async fn main() -> Result<(), io::Error> {
             program_name = PathBuf::from(&args[1]);
             test_dir = Path::new(&args[2]);
         }
+        4 => {
+            program_name = PathBuf::from(&args[1]);
+            test_dir = Path::new(&args[2]);
+        }
         _ => {
             panic!("too many arguments")
         }
     }
 
     //contains all files, not just tests, but will be filtered later in for loop
-    let folder = fs::read_dir(test_dir)?.into_iter();
     let _output = Command::new("javac")
         .arg(&program_name.with_extension("java"))
         .output()?;
 
-    let mut t_idx = 1;
-
-    for file in folder {
-        let file = file?.path();
-        if file.extension().unwrap_or(OsStr::new("")) == "in" {
-            children.push(async_std::task::spawn({
-                let program_name = program_name.clone().with_extension("");
-                let file = file.clone();
-                //TODO which asyncs are necessary here?
-                async move {
-                    let a = thread(&t_idx, program_name, &file);
-                    return a;
-                }
-            }));
-            t_idx += 1;
-        }
-    }
-
+    test_io(program_name, test_dir, &mut children);
     let mut idx = 0;
 
     for child in children {
+        child.await;
         let out = child
-            .await
+            .task()
             .unwrap_or(format!("{} \u{2753} - likely did not finish", idx));
         println!("{}", out);
         idx += 1;
