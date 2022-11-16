@@ -129,12 +129,15 @@ async fn test_class(
     let mut t_idx = 0;
     let mut children = vec![];
     let folder = fs::read_dir(test_dir)?.into_iter();
+    let programs = fs::read_dir(program_dir)?.into_iter();
 
     //compile all programs
-    let _output = Command::new("javac")
-        .current_dir(program_dir)
-        .arg("*.java")
-        .output()?;
+    for program in programs {
+        let p = program?.path();
+        if p.extension().unwrap_or(OsStr::new("")) == "java" {
+            let _output = Command::new("javac").arg(p).output()?;
+        }
+    }
 
     //test dir elements can be run with java without prior compilation, since they are only run once
     for file in folder {
