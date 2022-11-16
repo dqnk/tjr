@@ -76,14 +76,18 @@ fn handle_diffs(
             .arg("--context")
             .arg(file.with_extension("res"))
             .arg(file.with_extension("out"))
-            .output()?
-            .stdout;
-        if output_diff.is_empty() {
+            .output()?;
+        if output_diff.stderr.is_empty() && output_diff.stdout.is_empty() {
             return Ok(String::from(format!("\u{2705} Test {}", t_idx)));
+        } else if output_diff.stdout.is_empty() {
+            return Err(Error::new(
+                ErrorKind::Other,
+                "Error - no .out file probably",
+            ));
         } else {
             fs::write(
                 file.with_extension("diff"),
-                String::from_utf8(output_diff)
+                String::from_utf8(output_diff.stdout)
                     .unwrap_or(String::from("Output and result files differ")),
             )?;
             return Ok(String::from(format!("\u{274C} Test {}", t_idx)));
@@ -117,6 +121,7 @@ async fn test_class(
                 let mut program_name = std::env::current_dir()?;
                 program_name.push(file);
                 let mut file_name = std::env::current_dir()?;
+                file_name.push(test_dir);
                 file_name.push(
                     file.file_name()
                         .expect("No test file")
@@ -135,7 +140,7 @@ async fn test_class(
     }
     let mut outs = vec![];
     for child in children {
-        let out = child.await.unwrap_or(String::from("Something went wrong"));
+        let out = child.await?;
         outs.push(out);
     }
     Ok(outs)
@@ -210,16 +215,12 @@ async fn main() -> Result<(), io::Error> {
     }
 
     if program_name.is_dir() {
-        children = test_class(&program_name, &test_dir)
-            .await
-            .expect("tests failed");
+        children = test_class(&program_name, &test_dir).await?;
     } else {
         let _output = Command::new("javac")
             .arg(&program_name.with_extension("java"))
             .output()?;
-        children = test_io(&program_name, &test_dir)
-            .await
-            .expect("tests failed");
+        children = test_io(&program_name, &test_dir).await?;
     }
 
     for child in children {
