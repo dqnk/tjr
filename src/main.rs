@@ -7,7 +7,6 @@ use std::io::{self, Error, ErrorKind, Write};
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Command;
-use std::str;
 
 fn find_main_java(path: &PathBuf) -> Result<PathBuf, io::Error> {
     let paths = fs::read_dir(path)?.into_iter();
@@ -20,7 +19,7 @@ fn find_main_java(path: &PathBuf) -> Result<PathBuf, io::Error> {
     return Err(Error::new(ErrorKind::Other, "Main java file not found."));
 }
 
-fn thread(t_idx: &u8, program_name: &PathBuf, file: &Path) -> Result<String, io::Error> {
+fn io_thread(t_idx: &u8, program_name: &PathBuf, file: &Path) -> Result<String, io::Error> {
     //this should be simpler
     let output = Command::new("java")
         .arg("-cp")
@@ -33,42 +32,7 @@ fn thread(t_idx: &u8, program_name: &PathBuf, file: &Path) -> Result<String, io:
         )
         .stdin(File::open(file)?)
         .output()?;
-    let output_status = output.status.code().unwrap_or(-1);
-    if output_status < 0 {
-        io::stderr().write_all(&output.stderr)?;
-        return Err(Error::new(
-            ErrorKind::Other,
-            format!("Error {} from java - program could not run", output_status),
-        ));
-    } else if output_status > 0 {
-        io::stderr().write_all(&output.stderr)?;
-        return Err(Error::new(
-            ErrorKind::Other,
-            format!(
-                "Error {} from java - error compiling probably",
-                output_status
-            ),
-        ));
-    } else {
-        fs::write(file.with_extension("res"), &output.stdout)?;
-
-        let output_diff = Command::new("diff")
-            .arg("--context")
-            .arg(file.with_extension("res"))
-            .arg(file.with_extension("out"))
-            .output()?
-            .stdout;
-        if output_diff.is_empty() {
-            return Ok(String::from(format!("\u{2705} Test {}", t_idx)));
-        } else {
-            fs::write(
-                file.with_extension("diff"),
-                String::from_utf8(output_diff)
-                    .unwrap_or(String::from("Output and result files differ")),
-            )?;
-            return Ok(String::from(format!("\u{274C} Test {}", t_idx)));
-        }
-    }
+    return handle_diffs(file, &output, t_idx);
 }
 
 fn class_thread(
@@ -77,13 +41,18 @@ fn class_thread(
     file: &Path,
     program_dir: &PathBuf,
 ) -> Result<String, io::Error> {
-    println!("hello");
     let output = Command::new("java")
         .current_dir(program_dir)
         .arg(&program_name)
         .output()?;
-    println!("a {}", str::from_utf8(&output.stderr).unwrap());
+    return handle_diffs(file, &output, t_idx);
+}
 
+fn handle_diffs(
+    file: &Path,
+    output: &std::process::Output,
+    t_idx: &u8,
+) -> Result<String, io::Error> {
     let output_status = output.status.code().unwrap_or(-1);
     if output_status < 0 {
         io::stderr().write_all(&output.stderr)?;
@@ -144,21 +113,9 @@ async fn test_class(
         let file = file?.path();
         if file.extension().unwrap_or(OsStr::new("")) == "java" {
             children.push(async_std::task::spawn({
-                //does this need clone?
-                //                let mut relative_path = PathBuf::new();
-                //                relative_path.push(&test_dir);
                 let program_dir = program_dir.clone();
                 let mut program_name = std::env::current_dir()?;
                 program_name.push(file);
-                println!("{}", program_name.to_str().unwrap());
-                //                let file_name = PathBuf::from(
-                //                    program_name
-                //                        .file_name()
-                //                        .expect("No program found")
-                //                        .to_str()
-                //                        .expect("Test program name broken /too short")
-                //                        .to_lowercase(),
-                //                );
                 let mut file_name = std::env::current_dir()?;
                 file_name.push(test_dir);
                 file_name.push(
@@ -169,7 +126,6 @@ async fn test_class(
                         .expect("Test program name broken /too short")
                         .to_lowercase(),
                 );
-                println!("{}", file_name.to_str().unwrap());
 
                 async move {
                     let a = class_thread(&t_idx, &program_name, &file_name, &program_dir);
@@ -201,7 +157,7 @@ async fn test_io(
                 let program_name = program_name.clone().with_extension("");
                 let file = file.clone();
                 async move {
-                    let a = thread(&t_idx, &program_name, &file);
+                    let a = io_thread(&t_idx, &program_name, &file);
                     return a;
                 }
             }));
@@ -256,12 +212,16 @@ async fn main() -> Result<(), io::Error> {
     }
 
     if program_name.is_dir() {
-        children = test_class(&program_name, &test_dir).await.unwrap();
+        children = test_class(&program_name, &test_dir)
+            .await
+            .expect("tests failed");
     } else {
         let _output = Command::new("javac")
             .arg(&program_name.with_extension("java"))
             .output()?;
-        children = test_io(&program_name, &test_dir).await.unwrap();
+        children = test_io(&program_name, &test_dir)
+            .await
+            .expect("tests failed");
     }
 
     for child in children {
