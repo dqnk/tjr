@@ -205,7 +205,6 @@ async fn main() -> Result<(), io::Error> {
             }
         }
         3 => {
-            // should program name be exected without ".java" filetype
             program_name = PathBuf::from(&args[1]);
             test_dir = PathBuf::from(&args[2]);
         }
@@ -215,6 +214,7 @@ async fn main() -> Result<(), io::Error> {
     }
 
     if program_name.is_dir() {
+        // multiple test classes
         children = test_class(&program_name, &test_dir).await?;
     } else {
         let _output = Command::new("javac")
