@@ -109,6 +109,16 @@ async fn test_class(
         let p = program?.path();
         if p.extension().unwrap_or(OsStr::new("")) == "java" {
             let _output = Command::new("javac").arg(p).output()?;
+            if !_output.stderr.is_empty() {
+                return Err(Error::new(
+                    ErrorKind::Other,
+                    format!(
+                        "Error compiling java \n{}",
+                        String::from_utf8(_output.stderr)
+                            .unwrap_or(String::from("No error message available from javac")),
+                    ),
+                ));
+            }
         }
     }
 
@@ -220,7 +230,18 @@ async fn main() -> Result<(), io::Error> {
         let _output = Command::new("javac")
             .arg(&program_name.with_extension("java"))
             .output()?;
-        children = test_io(&program_name, &test_dir).await?;
+        if _output.stderr.is_empty() {
+            children = test_io(&program_name, &test_dir).await?;
+        } else {
+            return Err(Error::new(
+                ErrorKind::Other,
+                format!(
+                    "Error compiling java \n{}",
+                    String::from_utf8(_output.stderr)
+                        .unwrap_or(String::from("No error message available from javac")),
+                ),
+            ));
+        }
     }
 
     for child in children {
