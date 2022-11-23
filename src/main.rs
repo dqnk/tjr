@@ -99,7 +99,7 @@ async fn test_class(
     program_dir: &PathBuf,
     test_dir: &PathBuf,
 ) -> Result<Vec<String>, std::io::Error> {
-    let mut t_idx = 0;
+    let mut t_idx = 1;
     let mut children = vec![];
     let folder = fs::read_dir(test_dir)?.into_iter();
     let programs = fs::read_dir(program_dir)?.into_iter();
@@ -160,7 +160,7 @@ async fn test_io(
     program_name: &PathBuf,
     test_dir: &PathBuf,
 ) -> Result<Vec<String>, std::io::Error> {
-    let mut t_idx = 0;
+    let mut t_idx = 1;
     let mut children = vec![];
     let folder = fs::read_dir(test_dir)?.into_iter();
     for file in folder {
