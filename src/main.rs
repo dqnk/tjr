@@ -102,13 +102,12 @@ async fn test_class(
     let mut t_idx = 1;
     let mut children = vec![];
     let folder = fs::read_dir(test_dir)?.into_iter();
-    let programs = fs::read_dir(program_dir)?.into_iter();
 
-    //compile all programs
-    for program in programs {
-        let p = program?.path();
-        if p.extension().unwrap_or(OsStr::new("")) == "java" {
-            let _output = Command::new("javac").arg(p).output()?;
+    let programs = fs::read_dir(program_dir)?
+        .filter_map(|p| p.ok())
+        .filter(|p| p.path().extension().map_or(false, |p| p == "java"))
+        .flat_map(|p| Command::new("javac").arg(p.path()).output())
+        .try_for_each(|_output| {
             if !_output.stderr.is_empty() {
                 return Err(Error::new(
                     ErrorKind::Other,
@@ -119,10 +118,14 @@ async fn test_class(
                     ),
                 ));
             }
-        }
-    }
+            Ok(())
+        });
 
-    //test dir elements can be run with java without prior compilation, since they are only run once
+    match programs {
+        Err(e) => return Err(e),
+        Ok(p) => p,
+    };
+
     for file in folder {
         let file = &file?.path();
         if file.extension().unwrap_or(OsStr::new("")) == "java" {
